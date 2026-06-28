@@ -21,6 +21,15 @@
   .filter-btn { padding: 5px 12px; border: 1px solid #ddd; background: #fff; color: #666; border-radius: 15px; cursor: pointer; font-size: 12px; transition: all 0.2s; white-space: nowrap; }
   .filter-btn:hover { border-color: #1565c0; color: #1565c0; }
   .filter-btn.active { background: #1565c0; color: #fff; border-color: #1565c0; font-weight: 600; }
+  .sub-filter-bar { width: 100%; padding: 6px 0 4px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .sub-filter-bar:empty { display: none; }
+  .sub-label { font-size: 11px; color: #999; font-weight: 700; margin-right: 4px; white-space: nowrap; }
+  .sub-item { padding: 3px 10px; border: 1px solid #eee; border-radius: 4px; font-size: 11px; color: #555; cursor: pointer; transition: all 0.15s; background: #fafafa; white-space: nowrap; }
+  .sub-item:hover { border-color: #999; }
+  .sub-item.active-orange { background: #ff9800; color: #fff; border-color: #ff9800; font-weight: 600; }
+  .sub-item.active-green { background: #26a69a; color: #fff; border-color: #26a69a; font-weight: 600; }
+  .sub-item.active-red { background: #ef5350; color: #fff; border-color: #ef5350; font-weight: 600; }
+  .sub-sep { width: 1px; height: 16px; background: #e0e0e0; margin: 0 2px; }
   .dim-group { display: flex; gap: 0; border-radius: 16px; overflow: hidden; border: 1px solid #e0e0e0; }
   .dim-btn { padding: 5px 14px; font-size: 12px; cursor: pointer; transition: all 0.2s; border: none; background: #fff; color: #666; position: relative; white-space: nowrap; }
   .dim-btn:not(:last-child) { border-right: 1px solid #e0e0e0; }
@@ -94,51 +103,19 @@
 <div class="topbar">
   <div class="topbar-inner">
     <h1>主板选股结果图表</h1>
-    <span class="scan-time">扫描时间: 2026-06-28 17:41</span>
+    <span class="scan-time">扫描时间: 2026-06-28 17:46</span>
     <div class="search-box">
       <input type="text" id="searchInput" placeholder="搜索代码/名称/行业/概念..." oninput="onFilterChange()">
     </div>
     <div class="filter-bar" id="filterBar">
       <div class="dim-group">
         <button class="dim-btn active-all" id="dimAll" onclick="switchDim('all')">全部</button>
-        <div class="dropdown-wrap">
-          <button class="dim-btn" id="dimSector" onclick="togglePanel('sectorPanel','dimSector')">板块分类<span class="arrow">▼</span></button>
-          <div class="dropdown-panel" id="sectorPanel">
-            <div class="status-row">
-              <span class="status-label">技术状态</span>
-              <div class="status-btns" id="sectorStatusBtns">
-                <div class="status-btn active-orange" onclick="pickStatus(this,'orange','sector')">已突破</div>
-                <div class="status-btn" onclick="pickStatus(this,'orange','sector')">接近突破</div>
-                <div class="status-btn" onclick="pickStatus(this,'orange','sector')">箱体内</div>
-              </div>
-            </div>
-            <div class="status-row" style="border-bottom:none;"><span class="status-label">选择板块</span></div>
-            <div class="sector-list" id="sectorList"></div>
-          </div>
-        </div>
-        <div class="dropdown-wrap">
-          <button class="dim-btn" id="dimTime" onclick="togglePanel('timePanel','dimTime')">吸筹时间<span class="arrow">▼</span></button>
-          <div class="dropdown-panel" id="timePanel" style="min-width:340px;">
-            <div class="status-row">
-              <span class="status-label">技术状态</span>
-              <div class="status-btns" id="timeStatusBtns">
-                <div class="status-btn active-green" onclick="pickStatus(this,'green','time')">已突破</div>
-                <div class="status-btn" onclick="pickStatus(this,'green','time')">接近突破</div>
-                <div class="status-btn" onclick="pickStatus(this,'green','time')">箱体内</div>
-              </div>
-            </div>
-            <div class="time-desc">按吸筹时间排序（才吸筹 → 吸筹一个月 → 吸筹两个月）</div>
-            <div class="time-row" id="timeRow">
-              <div class="time-item selected" onclick="pickTime(this,'all')">全部时间</div>
-              <div class="time-item" onclick="pickTime(this,'short')">才吸筹(0-7天)</div>
-              <div class="time-item" onclick="pickTime(this,'month')">吸筹一个月</div>
-              <div class="time-item" onclick="pickTime(this,'twomonth')">吸筹两个月</div>
-            </div>
-          </div>
-        </div>
+        <button class="dim-btn" id="dimSector" onclick="switchDim('sector')">板块分类</button>
+        <button class="dim-btn" id="dimTime" onclick="switchDim('time')">吸筹时间</button>
       </div>
       <button class="filter-btn" data-filter="favorites" style="border:1px solid #1565c0;color:#1565c0;border-radius:16px;background:#fff;cursor:pointer;padding:5px 12px;font-size:12px;">★ 自选</button>
     </div>
+    <div class="sub-filter-bar" id="subFilterBar"></div>
     <span class="result-count" id="resultCount">显示 212 只</span>
   </div>
 </div>
@@ -187,7 +164,7 @@ function toggleFav(code) {
 // 三维度筛选相关函数
 function switchDim(dim) {
   currentDim = dim;
-  currentFilter = dim === 'all' ? 'all' : currentFilter;
+  if (dim === 'all') currentFilter = 'all';
   closeAllPanels();
   document.getElementById('dimAll').className = 'dim-btn';
   document.getElementById('dimSector').className = 'dim-btn';
@@ -195,62 +172,72 @@ function switchDim(dim) {
   if (dim === 'all') {
     document.getElementById('dimAll').className = 'dim-btn active-all';
     currentFilter = 'all';
-  }
-  buildCards();
-}
-
-function togglePanel(panelId, btnId) {
-  const panel = document.getElementById(panelId);
-  const btn = document.getElementById(btnId);
-  const isShow = panel.classList.contains('show');
-  closeAllPanels();
-  document.getElementById('dimAll').className = 'dim-btn';
-  document.getElementById('dimSector').className = 'dim-btn';
-  document.getElementById('dimTime').className = 'dim-btn';
-  if (!isShow) {
-    panel.classList.add('show');
-    if (btnId === 'dimSector') {
-      btn.className = 'dim-btn active-sector';
-      currentDim = 'sector';
-      currentFilter = 'sector';
-    } else {
-      btn.className = 'dim-btn active-time';
-      currentDim = 'time';
-      currentFilter = 'time';
-    }
-  } else {
-    switchDim('all');
-    return;
+    document.getElementById('subFilterBar').innerHTML = '';
+  } else if (dim === 'sector') {
+    document.getElementById('dimSector').className = 'dim-btn active-sector';
+    currentFilter = 'sector';
+    renderSectorSubBar();
+  } else if (dim === 'time') {
+    document.getElementById('dimTime').className = 'dim-btn active-time';
+    currentFilter = 'time';
+    renderTimeSubBar();
   }
   buildCards();
 }
 
 function closeAllPanels() {
-  document.getElementById('sectorPanel').classList.remove('show');
-  document.getElementById('timePanel').classList.remove('show');
+  // 兼容旧调用
 }
 
-function pickStatus(el, color, type) {
-  const siblings = el.parentNode.querySelectorAll('.status-btn');
-  siblings.forEach(s => { s.className = 'status-btn'; });
-  el.className = 'status-btn active-' + color;
-  currentStatus[type] = el.textContent;
+function renderSectorSubBar() {
+  const sectors = ['全部板块'];
+  const seen = new Set();
+  stockData.forEach(s => { if (s[2] && !seen.has(s[2])) { seen.add(s[2]); sectors.push(s[2]); } });
+  sectors.sort((a,b) => a === '全部板块' ? -1 : b === '全部板块' ? 1 : a.localeCompare(b));
+  
+  let html = '<span class="sub-label">状态:</span>';
+  ['已突破','接近突破','箱体内'].forEach(st => {
+    const cls = currentStatus.sector === st ? ' active-orange' : '';
+    html += '<span class="sub-item' + cls + '" onclick="pickStatusInline(this,\'sector\',\'' + st + '\')">' + st + '</span>';
+  });
+  html += '<span class="sub-sep"></span><span class="sub-label">板块:</span>';
+  sectors.forEach(sec => {
+    const cls = currentSector === sec ? ' active-orange' : '';
+    html += '<span class="sub-item' + cls + '" onclick="pickSectorInline(this,\'' + sec + '\')">' + sec + '</span>';
+  });
+  document.getElementById('subFilterBar').innerHTML = html;
+}
+
+function renderTimeSubBar() {
+  let html = '<span class="sub-label">状态:</span>';
+  ['已突破','接近突破','箱体内'].forEach(st => {
+    const cls = currentStatus.time === st ? ' active-green' : '';
+    html += '<span class="sub-item' + cls + '" onclick="pickStatusInline(this,\'time\',\'' + st + '\')">' + st + '</span>';
+  });
+  html += '<span class="sub-sep"></span><span class="sub-label">吸筹:</span>';
+  const times = [['all','全部时间'],['short','才吸筹(0-7天)'],['month','吸筹一个月'],['twomonth','吸筹两个月']];
+  times.forEach(t => {
+    const cls = currentTimeRange === t[0] ? ' active-green' : '';
+    html += '<span class="sub-item' + cls + '" onclick="pickTimeInline(this,\'' + t[0] + '\')">' + t[1] + '</span>';
+  });
+  document.getElementById('subFilterBar').innerHTML = html;
+}
+
+function pickStatusInline(el, type, status) {
+  currentStatus[type] = status;
+  if (type === 'sector') renderSectorSubBar(); else renderTimeSubBar();
   buildCards();
 }
 
-function pickSector(el) {
-  const siblings = el.parentNode.querySelectorAll('.sector-list-item');
-  siblings.forEach(s => s.classList.remove('selected'));
-  el.classList.add('selected');
-  currentSector = el.textContent;
+function pickSectorInline(sector) {
+  currentSector = sector;
+  renderSectorSubBar();
   buildCards();
 }
 
-function pickTime(el, range) {
-  const siblings = el.parentNode.querySelectorAll('.time-item');
-  siblings.forEach(s => s.classList.remove('selected'));
-  el.classList.add('selected');
+function pickTimeInline(range) {
   currentTimeRange = range;
+  renderTimeSubBar();
   buildCards();
 }
 
@@ -263,18 +250,6 @@ function calcAccumulationDays(var7) {
     else break;
   }
   return days;
-}
-
-// 初始化板块列表
-function initSectorList() {
-  const sectors = new Set();
-  stockData.forEach(s => { if (s[2]) sectors.add(s[2]); });
-  const list = document.getElementById('sectorList');
-  let html = '<span class="sector-list-item selected" onclick="pickSector(this)">全部板块</span>';
-  Array.from(sectors).sort().forEach(sec => {
-    html += '<span class="sector-list-item" onclick="pickSector(this)">' + sec + '</span>';
-  });
-  list.innerHTML = html;
 }
 
   function destroyAllCharts() {
@@ -560,15 +535,7 @@ document.getElementById('filterBar').addEventListener('click', function(e) {
   }
 });
 
-// 点击外部关闭下拉
-document.addEventListener('click', function(e) {
-  if (!e.target.closest('.dropdown-wrap')) {
-    closeAllPanels();
-  }
-});
-
-// 初始化板块列表
-initSectorList();
+// 初始化
 buildCards();
 
 let resizeTimer;

@@ -103,7 +103,7 @@
 <div class="topbar">
   <div class="topbar-inner">
     <h1>主板选股结果图表</h1>
-    <span class="scan-time">扫描时间: 2026-06-28 17:54</span>
+    <span class="scan-time">扫描时间: 2026-06-28 18:02</span>
     <div class="search-box">
       <input type="text" id="searchInput" placeholder="搜索代码/名称/行业/概念..." oninput="onFilterChange()">
     </div>
@@ -139,7 +139,7 @@ let chartInstances = [];
 let currentFilter = 'all';
 let currentSearch = '';
 let currentDim = 'all';
-let currentStatus = { sector: '已突破', time: '已突破' };
+let currentStatus = { sector: '已突破', time: '已突破', all: '全部' };
 let currentSector = '全部板块';
 let currentTimeRange = 'all';
 let renderedCards = new Set();
@@ -172,7 +172,7 @@ function switchDim(dim) {
   if (dim === 'all') {
     document.getElementById('dimAll').className = 'dim-btn active-all';
     currentFilter = 'all';
-    document.getElementById('subFilterBar').innerHTML = '';
+    renderAllSubBar();
   } else if (dim === 'sector') {
     document.getElementById('dimSector').className = 'dim-btn active-sector';
     currentFilter = 'sector';
@@ -187,6 +187,16 @@ function switchDim(dim) {
 
 function closeAllPanels() {
   // 兼容旧调用
+}
+
+function renderAllSubBar() {
+  let html = '<span class="sub-label">状态:</span>';
+  const opts = [['全部','全部'],['已突破','已突破'],['接近突破','接近突破'],['箱体内','箱体内']];
+  opts.forEach(o => {
+    const cls = currentStatus.all === o[1] ? ' active-red' : '';
+    html += '<span class="sub-item' + cls + '" data-type="allstatus" data-val="' + o[0] + '">' + o[1] + '</span>';
+  });
+  document.getElementById('subFilterBar').innerHTML = html;
 }
 
 function renderSectorSubBar() {
@@ -229,7 +239,10 @@ document.getElementById('subFilterBar').addEventListener('click', function(e) {
   if (!item) return;
   const type = item.dataset.type;
   const val = item.dataset.val;
-  if (type === 'status') {
+  if (type === 'allstatus') {
+    currentStatus.all = val;
+    renderAllSubBar();
+  } else if (type === 'status') {
     currentStatus[currentDim] = val;
     if (currentDim === 'sector') renderSectorSubBar(); else renderTimeSubBar();
   } else if (type === 'sector') {
@@ -242,15 +255,13 @@ document.getElementById('subFilterBar').addEventListener('click', function(e) {
   buildCards();
 });
 
-// 计算吸筹天数（从var7数组末尾连续非零值）
+// 计算距上次吸筹的天数（找最后一次VAR7>阈值的日期，算距今多少天）
 function calcAccumulationDays(var7) {
-  if (!var7 || var7.length === 0) return 0;
-  let days = 0;
+  if (!var7 || var7.length === 0) return 999;
   for (let i = var7.length - 1; i >= 0; i--) {
-    if (var7[i] > 0.001) days++;
-    else break;
+    if (var7[i] > 0.001) return var7.length - 1 - i; // 距今多少天
   }
-  return days;
+  return 999; // 从未吸筹
 }
 
   function destroyAllCharts() {
@@ -398,7 +409,7 @@ function buildCards() {
     return bp - ap;
   });
 
-  // 吸筹时间维度需要按吸筹天数排序
+  // 吸筹时间维度需要按距上次吸筹天数排序（最近吸筹的排前面）
   if (currentDim === 'time') {
     sortedData.sort((a, b) => {
       const ap = pinned.includes(a.s[0]) ? 1 : 0;
@@ -406,11 +417,7 @@ function buildCards() {
       if (bp - ap !== 0) return bp - ap;
       const ad = calcAccumulationDays(a.s[11]);
       const bd = calcAccumulationDays(b.s[11]);
-      // 时间范围筛选决定排序方向
-      if (currentTimeRange === 'short') return ad - bd; // 才吸筹排前面
-      if (currentTimeRange === 'month') return ad - bd;
-      if (currentTimeRange === 'twomonth') return bd - ad; // 长时间排前面
-      return ad - bd;
+      return ad - bd; // 天数小的（最近吸筹）排前面
     });
   }
 
@@ -419,19 +426,25 @@ function buildCards() {
     // 三维度筛选
     if (currentFilter === 'favorites') {
       if (!favorites.includes(code)) return;
+    } else if (currentDim === 'all') {
+      // 全部维度：可按状态筛选
+      if (currentStatus.all !== '全部') {
+        const statusMap = {'已突破':'breaking_out','接近突破':'near_top','箱体内':'in_box'};
+        if (position !== statusMap[currentStatus.all]) return;
+      }
     } else if (currentDim === 'sector') {
       // 板块维度：先筛选状态，再筛选板块
       const statusMap = {'已突破':'breaking_out','接近突破':'near_top','箱体内':'in_box'};
       if (position !== statusMap[currentStatus.sector]) return;
       if (currentSector !== '全部板块' && sector !== currentSector) return;
     } else if (currentDim === 'time') {
-      // 吸筹时间维度：先筛选状态，再筛选时间范围
+      // 吸筹时间维度：先筛选状态，再按距上次吸筹的天数筛选
       const statusMap = {'已突破':'breaking_out','接近突破':'near_top','箱体内':'in_box'};
       if (position !== statusMap[currentStatus.time]) return;
       const accDays = calcAccumulationDays(var7);
       if (currentTimeRange === 'short' && accDays > 7) return;
-      if (currentTimeRange === 'month' && (accDays < 8 || accDays > 30)) return;
-      if (currentTimeRange === 'twomonth' && (accDays < 31)) return;
+      if (currentTimeRange === 'month' && (accDays < 8 || accDays > 60)) return;
+      if (currentTimeRange === 'twomonth' && accDays < 61) return;
     }
     if (currentSearch) {
       const q = currentSearch.toLowerCase();
@@ -484,7 +497,7 @@ function buildCards() {
       '<span>最新价 <strong>' + latestClose + '</strong></span>' +
       '<span>VAR7峰值 <strong>' + var7RawMax.toFixed(2) + '</strong></span>' +
       '<span>VAR7归一化 <strong>' + var7NormMax + '%</strong></span>' +
-      '<span>吸筹天数 <strong>' + accDays + '天</strong></span>' +
+      '<span>吸筹天数 <strong>' + (accDays >= 999 ? '无' : accDays + '天前') + '</strong></span>' +
       '</div>';
     container.appendChild(card);
     // 懒加载：由IntersectionObserver在卡片进入视口时渲染图表

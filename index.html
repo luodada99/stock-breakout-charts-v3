@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>选股结果图表</title>
+<title>主板选股结果图表</title>
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -12,6 +12,7 @@
   .topbar { background: #fff; border-bottom: 1px solid #e0e0e0; padding: 10px 15px; position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
   .topbar-inner { max-width: 1100px; margin: 0 auto; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .topbar h1 { font-size: 15px; color: #1565c0; white-space: nowrap; }
+  .scan-time { font-size: 12px; color: #888; white-space: nowrap; margin-left: 8px; }
   .search-box { flex: 1; min-width: 200px; max-width: 350px; position: relative; }
   .search-box input { width: 100%; padding: 7px 12px 7px 32px; border: 1px solid #ddd; border-radius: 20px; font-size: 13px; outline: none; }
   .search-box input:focus { border-color: #1565c0; }
@@ -58,7 +59,8 @@
 <body>
 <div class="topbar">
   <div class="topbar-inner">
-    <h1>选股结果图表</h1>
+    <h1>主板选股结果图表</h1>
+    <span class="scan-time">扫描时间: 2026-06-28 10:06</span>
     <div class="search-box">
       <input type="text" id="searchInput" placeholder="搜索代码/名称/行业/概念..." oninput="onFilterChange()">
     </div>
@@ -67,6 +69,7 @@
       <button class="filter-btn" data-filter="breaking_out">已突破(116)</button>
       <button class="filter-btn" data-filter="near_top">接近突破(9)</button>
       <button class="filter-btn" data-filter="in_box">箱体内(19)</button>
+      <button class="filter-btn" data-filter="near_support">接近下沿(14)</button>
       <button class="filter-btn" data-filter="below_box">跌破下沿(15)</button>
     </div>
     <span class="result-count" id="resultCount">显示 212 只</span>

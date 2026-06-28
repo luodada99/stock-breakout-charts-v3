@@ -103,7 +103,7 @@
 <div class="topbar">
   <div class="topbar-inner">
     <h1>主板选股结果图表</h1>
-    <span class="scan-time">扫描时间: 2026-06-28 17:46</span>
+    <span class="scan-time">扫描时间: 2026-06-28 17:52</span>
     <div class="search-box">
       <input type="text" id="searchInput" placeholder="搜索代码/名称/行业/概念..." oninput="onFilterChange()">
     </div>
@@ -198,12 +198,12 @@ function renderSectorSubBar() {
   let html = '<span class="sub-label">状态:</span>';
   ['已突破','接近突破','箱体内'].forEach(st => {
     const cls = currentStatus.sector === st ? ' active-orange' : '';
-    html += '<span class="sub-item' + cls + '" onclick="pickStatusInline(this,\'sector\',\'' + st + '\')">' + st + '</span>';
+    html += '<span class="sub-item' + cls + '" onclick="pickStatusInline(\'sector\',\'' + st + '\')">' + st + '</span>';
   });
   html += '<span class="sub-sep"></span><span class="sub-label">板块:</span>';
   sectors.forEach(sec => {
     const cls = currentSector === sec ? ' active-orange' : '';
-    html += '<span class="sub-item' + cls + '" onclick="pickSectorInline(this,\'' + sec + '\')">' + sec + '</span>';
+    html += '<span class="sub-item' + cls + '" onclick="pickSectorInline(\'' + sec + '\')">' + sec + '</span>';
   });
   document.getElementById('subFilterBar').innerHTML = html;
 }
@@ -212,18 +212,18 @@ function renderTimeSubBar() {
   let html = '<span class="sub-label">状态:</span>';
   ['已突破','接近突破','箱体内'].forEach(st => {
     const cls = currentStatus.time === st ? ' active-green' : '';
-    html += '<span class="sub-item' + cls + '" onclick="pickStatusInline(this,\'time\',\'' + st + '\')">' + st + '</span>';
+    html += '<span class="sub-item' + cls + '" onclick="pickStatusInline(\'time\',\'' + st + '\')">' + st + '</span>';
   });
   html += '<span class="sub-sep"></span><span class="sub-label">吸筹:</span>';
   const times = [['all','全部时间'],['short','才吸筹(0-7天)'],['month','吸筹一个月'],['twomonth','吸筹两个月']];
   times.forEach(t => {
     const cls = currentTimeRange === t[0] ? ' active-green' : '';
-    html += '<span class="sub-item' + cls + '" onclick="pickTimeInline(this,\'' + t[0] + '\')">' + t[1] + '</span>';
+    html += '<span class="sub-item' + cls + '" onclick="pickTimeInline(\'' + t[0] + '\')">' + t[1] + '</span>';
   });
   document.getElementById('subFilterBar').innerHTML = html;
 }
 
-function pickStatusInline(el, type, status) {
+function pickStatusInline(type, status) {
   currentStatus[type] = status;
   if (type === 'sector') renderSectorSubBar(); else renderTimeSubBar();
   buildCards();

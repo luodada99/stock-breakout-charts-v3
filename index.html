@@ -21,6 +21,11 @@
   .filter-btn { padding: 5px 12px; border: 1px solid #ddd; background: #fff; color: #666; border-radius: 15px; cursor: pointer; font-size: 12px; transition: all 0.2s; white-space: nowrap; }
   .filter-btn:hover { border-color: #1565c0; color: #1565c0; }
   .filter-btn.active { background: #1565c0; color: #fff; border-color: #1565c0; font-weight: 600; }
+  .action-btn { padding: 3px 8px; border: 1px solid #ddd; background: #fff; color: #666; border-radius: 4px; cursor: pointer; font-size: 11px; transition: all 0.2s; line-height: 1.4; }
+  .action-btn:hover { border-color: #1565c0; color: #1565c0; }
+  .action-btn.active-pin { background: #ff6f00; color: #fff; border-color: #ff6f00; font-weight: 600; }
+  .action-btn.active-fav { background: #1565c0; color: #fff; border-color: #1565c0; font-weight: 600; }
+  .card-pinned { box-shadow: 0 2px 8px rgba(255,111,0,0.3); border: 1px solid #ff6f00; }
   .result-count { font-size: 12px; color: #999; margin-left: auto; }
   .container { max-width: 1100px; margin: 0 auto; padding: 12px; }
   .stock-card { background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 12px; overflow: hidden; }
@@ -62,7 +67,7 @@
 <div class="topbar">
   <div class="topbar-inner">
     <h1>主板选股结果图表</h1>
-    <span class="scan-time">扫描时间: 2026-06-28 14:46</span>
+    <span class="scan-time">扫描时间: 2026-06-28 15:20</span>
     <div class="search-box">
       <input type="text" id="searchInput" placeholder="搜索代码/名称/行业/概念..." oninput="onFilterChange()">
     </div>
@@ -71,6 +76,7 @@
       <button class="filter-btn" data-filter="breaking_out">已突破(118)</button>
       <button class="filter-btn" data-filter="near_top">接近突破(7)</button>
       <button class="filter-btn" data-filter="in_box">箱体内(48)</button>
+      <button class="filter-btn" data-filter="favorites" style="border-color:#1565c0;color:#1565c0;">★ 自选</button>
     </div>
     <span class="result-count" id="resultCount">显示 212 只</span>
   </div>
@@ -95,7 +101,23 @@ let chartInstances = [];
 let currentFilter = 'all';
 let currentSearch = '';
 
-function destroyAllCharts() {
+// 置顶和自选功能（localStorage持久化）
+function getPinned() { try { return JSON.parse(localStorage.getItem('v3_pinned') || '[]'); } catch(e) { return []; } }
+function getFavorites() { try { return JSON.parse(localStorage.getItem('v3_favorites') || '[]'); } catch(e) { return []; } }
+function togglePin(code) {
+  let p = getPinned();
+  if (p.includes(code)) { p = p.filter(c => c !== code); } else { p.unshift(code); }
+  localStorage.setItem('v3_pinned', JSON.stringify(p));
+  buildCards();
+}
+function toggleFav(code) {
+  let f = getFavorites();
+  if (f.includes(code)) { f = f.filter(c => c !== code); } else { f.unshift(code); }
+  localStorage.setItem('v3_favorites', JSON.stringify(f));
+  buildCards();
+}
+
+  function destroyAllCharts() {
   chartInstances.forEach(c => { try { c.dispose(); } catch(e) {} });
   chartInstances = [];
 }
@@ -229,9 +251,23 @@ function buildCards() {
   container.innerHTML = '';
   let visibleCount = 0;
 
-  stockData.forEach((s, idx) => {
+  const pinned = getPinned();
+  const favorites = getFavorites();
+
+  // 排序：置顶的排最前面，其余按原顺序
+  let sortedData = stockData.map((s, idx) => ({ s, idx }));
+  sortedData.sort((a, b) => {
+    const ap = pinned.includes(a.s[0]) ? 1 : 0;
+    const bp = pinned.includes(b.s[0]) ? 1 : 0;
+    return bp - ap;
+  });
+
+  sortedData.forEach(({ s, idx }) => {
     const [code, name, sector, position, score, concepts, boxUpper, boxLower, dates, klines, volumes, var7, , , , var7RawMax, var7NormMax, risks, b2, sma2, boxTop, ema10d, ema25d, ema40d, ema80d, buySigs, bigNet] = s;
-    if (currentFilter !== 'all' && position !== currentFilter) return;
+    // 自选筛选
+    if (currentFilter === 'favorites') {
+      if (!favorites.includes(code)) return;
+    } else if (currentFilter !== 'all' && position !== currentFilter) return;
     if (currentSearch) {
       const q = currentSearch.toLowerCase();
       if (!code.toLowerCase().includes(q) && !name.toLowerCase().includes(q) && !sector.toLowerCase().includes(q) && !concepts.toLowerCase().includes(q)) return;
@@ -240,6 +276,8 @@ function buildCards() {
     const posStr = posMap[position] || position;
     const tagClass = posTagClass[position] || 'tag-near';
     const latestClose = klines[klines.length-1][1].toFixed(2);
+    const isPinned = pinned.includes(code);
+    const isFav = favorites.includes(code);
 
     // 爆雷隐患标签（第二行，右对齐，不干扰右上角文字）
     let riskHtml = '';
@@ -254,10 +292,13 @@ function buildCards() {
     }
 
     const card = document.createElement('div');
-    card.className = 'stock-card';
+    card.className = 'stock-card' + (isPinned ? ' card-pinned' : '');
     card.innerHTML = '<div class="stock-header">' +
       '<div class="stock-title">' +
-      '<div class="stock-title-row"><span class="stock-name">' + name + '</span><span class="stock-code">' + code + '</span><span class="stock-sector">' + sector + '</span></div>' +
+      '<div class="stock-title-row"><span class="stock-name">' + name + '</span><span class="stock-code">' + code + '</span><span class="stock-sector">' + sector + '</span>' +
+      '<button class="action-btn' + (isPinned ? ' active-pin' : '') + '" onclick="togglePin(\'' + code + '\')" title="置顶/取消置顶">' + (isPinned ? '已置顶' : '置顶') + '</button>' +
+      '<button class="action-btn' + (isFav ? ' active-fav' : '') + '" onclick="toggleFav(\'' + code + '\')" title="加入/移除自选">' + (isFav ? '★已选' : '☆自选') + '</button>' +
+      '</div>' +
       (concepts ? '<div class="stock-concepts">' + concepts + '</div>' : '') +
       '</div>' +
       '<div class="stock-tags"><span class="tag ' + tagClass + '">' + posStr + '</span><span class="tag tag-score">评分' + score + '</span></div>' +

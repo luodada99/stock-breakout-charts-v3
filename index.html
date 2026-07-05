@@ -153,8 +153,8 @@
 <div class="topbar">
   <div class="topbar-inner">
     <h1>主板选股结果图表</h1>
-    <span class="scan-time">扫描时间: 2026-07-05 22:36</span>
-    <span class="scan-time" style="margin-left:4px;color:#bbb;">ver: 20260705223651</span>
+    <span class="scan-time">扫描时间: 2026-07-05 22:40</span>
+    <span class="scan-time" style="margin-left:4px;color:#bbb;">ver: 20260705224049</span>
     <div class="search-box">
       <input type="text" id="searchInput" placeholder="搜索代码/名称/行业/概念..." oninput="onFilterChange()">
     </div>
@@ -551,7 +551,7 @@ function buildCards() {
   }
 
   sortedData.forEach(({ s, idx }) => {
-    const [code, name, sector, position, score, concepts, boxUpper, boxLower, dates, klines, volumes, var7, , , , var7RawMax, var7NormMax, risks, b2, sma2, boxTop, ema10d, ema25d, ema40d, ema80d, buySigs, bigNet, aiRating, aiLabel, pegValue, pegRating, enhancedScore] = s;
+    const [code, name, sector, position, score, concepts, boxUpper, boxLower, dates, klines, volumes, var7, ma5, ma10, ma20, var7RawMax, var7NormMax, risks, b2, sma2, boxTop, ema10d, ema25d, ema40d, ema80d, buySigs, bigNet, aiRating, aiLabel, pegValue, pegRating, enhancedScore] = s;
     // 三维度筛选
     if (currentFilter === 'favorites') {
       if (!favorites.includes(code)) return;
